@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light/Dark foundations */
+:root { color-scheme: light dark; }
+html, body, #root { height: 100%; }
+body { @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100; }
+
+/* Reusable UI atoms (with dark variants) */
+.card { @apply bg-white/90 dark:bg-slate-900/70 backdrop-blur rounded-2xl shadow border border-slate-200 dark:border-slate-800 p-6; }
+.input { @apply border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 w-full outline-none bg-white dark:bg-slate-900
+         focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400 dark:placeholder-slate-500; }
+.select { @apply input pr-8; }
+.btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50; }
+.btn-ghost { @apply rounded-xl px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60; }
+.badge { @apply inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300; }
+
+.table { @apply w-full text-sm; }
+.table th, .table td { @apply border-b border-slate-200 dark:border-slate-800 px-3 py-2; }
+.table tr:nth-child(odd) td { @apply bg-slate-50/50 dark:bg-slate-900/40; }
+
+.icon-btn { @apply inline-flex items-center justify-center w-9 h-9 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-200 hover:bg-slate-700/80; }
+.icon-btn--danger { @apply text-red-500 hover:text-red-400; }
+.icon { width: 18px; height: 18px; display: block; }
+
+/* === Gold theme add-ons (non-destructive) === */
+.accent-amber { @apply border border-amber-500/40; }
+.accent-green { @apply border border-emerald-500/40; }
+
+.btn-amber{
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium
+         text-slate-900 bg-amber-400 hover:bg-amber-500 active:bg-amber-600
+         border border-amber-500/40 shadow;
+}
+.btn-ghost-ink{ @apply rounded-xl px-3 py-2 text-slate-200 border border-slate-700 bg-slate-900/40 hover:bg-slate-800/60; }
+
+.badge-amber{ @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs
+               text-amber-300 bg-amber-500/10 border border-amber-400/40; }
+.badge-green{ @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs
+               text-emerald-300 bg-emerald-500/10 border border-emerald-400/40; }
+
+.card-glow{ box-shadow: 0 0 0 1px rgb(251 191 36 / 0.25), 0 10px 30px -10px rgba(0,0,0,.4); }
+
+/* === Kanban/Kabana drag fix ===
+   Make the whole card draggable but keep real controls clickable. */
+.kb-card { cursor: grab; }
+.kb-card:active { cursor: grabbing; }
+/* Let drag events hit the card, not the inner chrome */
+.kb-card > * { pointer-events: none; }
+/* Re-enable clicks for controls */
+.kb-card .btn,
+.kb-card .btn-amber,
+.kb-card .btn-ghost,
+.kb-card .btn-ghost-ink,
+.kb-card .icon-btn,
+.kb-card [role="button"],
+.kb-card button,
+.kb-card a,
+.kb-card input,
+.kb-card select,
+.kb-card .menu { pointer-events: auto; cursor: pointer; }

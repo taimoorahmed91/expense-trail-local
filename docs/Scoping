@@ -1,0 +1,108 @@
+Expense App - Logic Specification (User-Owned Expenses, Group Aggregation)
+=================================================================================
+
+Overview
+--------
+Invite-only expense app. Users can belong to multiple groups. Expenses are *owned by users* (no group_id on expense).
+Groups are collections of users used for **read-only aggregation**. Portal/admin changes are superadmin-only.
+
+Immutables
+----------
+- User 'superadmin' – cannot be created or deleted.
+- Group 'superadmingroup' – cannot be created or deleted.
+- 'superadmin' is a member of 'superadmingroup' with full global privileges.
+
+Identity & Auth
+---------------
+- Required: username, email, password. Optional: phone.
+- Users are provisioned by superadmin only; must belong to ≥1 group to be usable.
+- Initial password set by superadmin. Users can change their own password after login.
+- Superadmin can reset any user’s password and set users active/inactive.
+- No "forgot password" option.
+- Login allowed only if user is active and belongs to ≥1 group.
+- Deactivated users: cannot log in, but their historical expenses remain in aggregates.
+
+Roles
+-----
+- Reader (default group member): may view group aggregates, and fully manage **their own** expenses.
+- Superadmin (global): full platform administration (users, groups, memberships, categories), password resets, activation.
+
+Core Data Model (logical)
+-------------------------
+- User(id, username, email, phone?, is_active)
+- Group(id, name)   [superadmingroup immutable]
+- GroupMember(group_id, user_id)   [membership grants read rights for that group’s aggregates]
+- Category(id, name, is_active)    [GLOBAL catalog, managed by superadmin; soft-deactivate]
+- Expense(id, user_id, amount, currency, category_id, note, spent_at_utc, created_at_utc)   [NO group_id; timestamps stored in UTC and shown in user’s local time]
+
+Scoping & Visibility
+--------------------
+- A user sees **only their own expense rows** (never others').
+- Group View (per group): read-only aggregate over **all expenses** of members in that group.
+- Superadmin bypasses scoping and can see/manage everything.
+
+Views & Behavior
+----------------
+1) My View (per user)
+   - CRUD only the signed-in user’s expenses.
+   - Filter by category/date/currency.
+   - Modes: 'All my groups' (i.e., all my expenses) or filter by any group to see my expenses by that group’s membership (same set: still my rows only).
+
+2) Group View (per group)
+   - Read-only aggregates for all members: totals, by-category breakdown, time trends.
+   - Export allowed: **aggregate-only** (no per-user or row-level exports).
+
+Aggregations
+------------
+- My View 'All my groups': sums the user’s own expenses across all groups they belong to (equivalent to all their expenses).
+- Group View: sums across all expenses of **all members** in that group.
+- Currency: report totals per currency (no silent FX). If display currency is added later, convert explicitly.
+- Categories: from GLOBAL catalog. **Soft-deactivate**: hidden for new entries; preserved on historical rows and reports.
+
+Lifecycle
+---------
+1. Superadmin provisions user → sets password → assigns to ≥1 group → (optional) set active/inactive.
+2. Superadmin provisions group → assigns members.
+3. User logs in → lands in last-used or first available group → can switch between My View and Group View.
+4. All portal admin (users, groups, memberships, categories, passwords, activation) is superadmin-only.
+
+Audit Log
+---------
+Record: timestamp_utc, actor_user_id, action, target_type, target_id, metadata.
+Audited events include (at minimum):
+- User provision, activation/deactivation
+- Password reset by superadmin; password change by user
+- Group create/rename/delete
+- Membership add/remove
+- Category create/rename/soft-deactivate
+- Login success/failure
+
+Safety Rails
+------------
+- Cannot delete/rename 'superadmin' or 'superadmingroup'.
+- User without any group membership cannot log in.
+- All admin actions are audit-logged.
+- Users never see other users’ individual expense rows.
+- Deleting a user soft-deactivates them; their historical expenses remain for aggregates.
+
+Permission Matrix
+-----------------
+| Action                                | Reader | Superadmin |
+|---------------------------------------|--------|------------|
+| Login (active + in ≥1 group)          | ✅     | ✅         |
+| Change own password                   | ✅     | ✅         |
+| Reset other user’s password           | ❌     | ✅         |
+| View own expenses (My View)           | ✅     | ✅         |
+| Create/update/delete own expenses     | ✅     | ✅         |
+| View Group View aggregates            | ✅     | ✅         |
+| Export Group View (aggregate-only)    | ✅     | ✅         |
+| Create/delete/rename groups           | ❌     | ✅         |
+| Manage categories (GLOBAL)            | ❌     | ✅         |
+| Add/remove members, change roles      | ❌     | ✅         |
+| Activate/deactivate users             | ❌     | ✅         |
+
+Roadmap (Later)
+---------------
+- **Corrections**: audit-friendly correction workflow for user expense edits (reason codes, before/after snapshots).
+- **Analysis**: richer insights (anomalies, monthly deltas, category drift, recurring detection).
+- **Budgeting**: budgets by category and/or user; alerts when approaching thresholds; explicit currency handling.
