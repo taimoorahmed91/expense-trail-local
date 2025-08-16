@@ -15,6 +15,7 @@ import AdminGroups from './pages/AdminGroups.jsx';
 import Categories from './pages/Categories.jsx';
 import Budget from './pages/Budget.jsx';
 import Analysis from './pages/Analysis.jsx';
+import Audit from './pages/Audit.jsx';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -33,6 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/categories" element={<Categories />} />
           <Route path="/budget" element={<Budget />} />
           <Route path="/analysis" element={<Analysis />} />
+          <Route path="/audit" element={<Audit />} />
           {/* Superadmin-only pages (gated inside the pages) */}
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/groups" element={<AdminGroups />} />

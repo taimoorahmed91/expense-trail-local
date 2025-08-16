@@ -5,6 +5,7 @@ import { ViewModeProvider, useViewMode } from './ctx/viewMode';
 import { Tags } from 'lucide-react';
 import { WalletMinimal } from 'lucide-react';
 import { LineChart } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import {
   LayoutDashboard,
   ReceiptText,
@@ -129,6 +130,9 @@ function Shell() {
           </Link>
           <Link to="/analysis" className="btn-ghost w-full text-left flex items-center">
             <LineChart className="w-4 h-4 mr-2" /> Analysis
+          </Link>
+          <Link to="/audit" className="btn-ghost w-full text-left flex items-center">
+            <ClipboardList className="w-4 h-4 mr-2" /> Audit Logs
           </Link>
 
         </nav>
