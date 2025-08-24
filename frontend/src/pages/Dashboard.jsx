@@ -7,8 +7,8 @@ import 'chart.js/auto';
 import { Doughnut } from 'react-chartjs-2';
 
 const RENTAL_ID = '26963812-8115-4d25-b820-306327d5cce5';
-const BILLS_ID = '925ff711-2efb-412d-a4e2-c591785bcbb5';
-const CURRENCY = 'PLN';
+const BILLS_ID  = '925ff711-2efb-412d-a4e2-c591785bcbb5';
+const CURRENCY  = 'PLN';
 
 export default function Dashboard() {
   const { mode } = useViewMode();
@@ -26,7 +26,7 @@ export default function Dashboard() {
   });
 
   const [pieToday, setPieToday] = useState(null);
-  const [pieWeek, setPieWeek] = useState(null);
+  const [pieWeek, setPieWeek]   = useState(null);
   const [pieMonth, setPieMonth] = useState(null);
 
   useEffect(() => {
@@ -80,11 +80,15 @@ export default function Dashboard() {
 
   async function loadData(view, g) {
     let cancelled = false;
-    const now = new Date();
-    const todayStart = new Date(now); todayStart.setUTCHours(0, 0, 0, 0);
-    const weekStart = new Date(todayStart); weekStart.setUTCDate(todayStart.getUTCDate() - 6);
-    const monthStart = new Date(todayStart); monthStart.setUTCDate(1);
-    const monthEnd = new Date(monthStart); monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1);
+
+    // LOCAL (Warsaw/browser) day bounds
+    const now         = new Date();
+    const todayStart  = new Date(now);          todayStart.setHours(0, 0, 0, 0);
+    const endOfToday  = new Date(todayStart);   endOfToday.setDate(endOfToday.getDate() + 1);
+
+    const weekStart   = new Date(todayStart);   weekStart.setDate(weekStart.getDate() - 6);
+    const monthStart  = new Date(todayStart);   monthStart.setDate(1);
+    // If you ever want month-to-date cards: use endOfToday; leaving cards minimal below.
 
     let all = [];
 
@@ -94,7 +98,7 @@ export default function Dashboard() {
         .select('amount, currency, category:category_id(name,color), spent_at_utc')
         .order('spent_at_utc', { ascending: true });
       if (error) { console.error(error); return; }
-      all = rows.filter(r => r.currency === CURRENCY);
+      all = (rows || []).filter(r => r.currency === CURRENCY);
     } else if (view === 'group' && g?.id) {
       const { data: rows, error } = await supabase
         .rpc('group_aggregate_by_category', { g: g.id });
@@ -109,11 +113,11 @@ export default function Dashboard() {
         }));
     }
 
-    // ===== Cards =====
+    // ===== Cards (kept as-is, except using local monthStart and endOfToday for to-date) =====
     const allTimeTotal = all.reduce((s, r) => s + Number(r.amount), 0);
     const thisMonth = all.filter(r => {
       const t = new Date(r.spent_at_utc);
-      return t >= monthStart && t < monthEnd;
+      return t >= monthStart && t < endOfToday; // month to-date (local)
     });
     const thisMonthTotal = thisMonth.reduce((s, r) => s + Number(r.amount), 0);
     const thisMonthCount = thisMonth.length;
@@ -134,17 +138,19 @@ export default function Dashboard() {
       setCards({ thisMonthTotal, thisMonthCount, allTimeTotal, nonRentalMonth, avgAllTime, topCategory });
     }
 
-    // ===== Pie Charts =====
-    const buildPie = (start) => {
+    // ===== Pie Charts (bounded; exclusive end) =====
+    const buildPie = (start, end) => {
       const map = new Map();
-      all.filter(r => new Date(r.spent_at_utc) >= start)
-        .forEach(r => {
-          const cat = r.category?.name || '(uncategorized)';
-          map.set(cat, (map.get(cat) || 0) + Number(r.amount));
-        });
+      all.filter(r => {
+        const t = new Date(r.spent_at_utc);
+        return t >= start && t < end;
+      }).forEach(r => {
+        const cat = r.category?.name || '(uncategorized)';
+        map.set(cat, (map.get(cat) || 0) + Number(r.amount));
+      });
       const labels = Array.from(map.keys());
       const values = Array.from(map.values());
-      const total = values.reduce((a, b) => a + b, 0);
+      const total  = values.reduce((a, b) => a + b, 0);
       const labelsWithPercent = labels.map((label, i) => {
         const pct = total ? ((values[i] / total) * 100).toFixed(1) : 0;
         return `${label} ${pct}%`;
@@ -153,9 +159,9 @@ export default function Dashboard() {
       return { labels: labelsWithPercent, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] };
     };
 
-    setPieToday(buildPie(todayStart));
-    setPieWeek(buildPie(weekStart));
-    setPieMonth(buildPie(monthStart));
+    setPieToday(buildPie(todayStart, endOfToday));
+    setPieWeek(buildPie(weekStart, endOfToday));   // last 7 days → today (local)
+    setPieMonth(buildPie(monthStart, endOfToday)); // month to-date (local)
 
     if (!cancelled) setReady(true);
   }
@@ -180,14 +186,14 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <Card title="This Month" hint={`${cards.thisMonthCount} transactions`} value={cards.thisMonthTotal} accent="border-amber-500/40" />
         <Card title="Total Expenses" hint="All time total" value={cards.allTimeTotal} />
-        <Card title="Non Rental Expenses" hint="This month excluding rental & utilities" value={cards.nonRentalMonth} accent="border-emerald-500/40" />
+        <Card title="Non Rental Expenses" hint="This month excl. rent/bills" value={cards.nonRentalMonth} accent="border-emerald-500/40" />
         <Card title="Average Expense" hint="Per transaction" value={cards.avgAllTime} />
         <Card title="Top Category" hint="Most spent category" valueLabel={cards.topCategory ?? '—'} />
       </div>
 
       {/* Pie Charts */}
       <div className="grid gap-6 md:grid-cols-3">
-        <ChartCard title="Today's Expenses" chart={<Doughnut data={pieToday} options={pieOpts} />} />
+        <ChartCard title="Today's Expenses"    chart={<Doughnut data={pieToday} options={pieOpts} />} />
         <ChartCard title="This Week's Expenses" chart={<Doughnut data={pieWeek} options={pieOpts} />} />
         <ChartCard title="This Month's Expenses" chart={<Doughnut data={pieMonth} options={pieOpts} />} />
       </div>
